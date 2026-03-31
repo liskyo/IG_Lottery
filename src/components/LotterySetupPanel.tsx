@@ -461,8 +461,7 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cover bg-center animate-in fade-in duration-500 overflow-hidden"
       style={{ backgroundImage: "url('/bg3.png')" }}
     >
-      {/* 黑色半透明疊加層，確保能在任何背景色上凸顯文字 */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-none"></div>
+      {/* 移除黑色疊加層，讓 bg3 呈現 100% 原始色彩 */}
 
       {/* 豪華灑落紙花與綵帶效果 */}
       <Confetti
@@ -475,8 +474,8 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
         style={{ zIndex: 10 }}
       />
       
-      {/* 中心開獎卡片 */}
-      <div className="w-full max-w-2xl bg-white/10 border border-white/40 backdrop-blur-2xl rounded-3xl p-8 sm:p-14 shadow-[0_0_60px_rgba(255,150,200,0.3)] relative text-center transform animate-in zoom-in-95 duration-700 z-20">
+      {/* 中心開獎卡片 (移除玻璃模糊背景，完全透出 bg3) */}
+      <div className="w-full max-w-2xl bg-transparent p-8 sm:p-14 relative text-center transform animate-in zoom-in-95 duration-700 z-20">
         
         <button 
           onClick={onClose}
