@@ -83,29 +83,54 @@ const LotterySetupPanel = () => {
     }
     
     setIsFetching(true);
-    // 模擬 API 延遲
-    const timer = setTimeout(() => {
-      let filtered = [...MOCK_COMMENTS];
-      
-      // 關鍵字過濾
-      if (formData.keyword) {
-        filtered = filtered.filter(c => c.text.toLowerCase().includes(formData.keyword.toLowerCase()));
-      }
-      
-      // 去除重複帳號
-      if (formData.removeDuplicates) {
-        const unique = new Map();
-        filtered.forEach(c => {
-          if (!unique.has(c.username)) unique.set(c.username, c);
-        });
-        filtered = Array.from(unique.values());
-      }
-      
-      setParticipants(filtered);
-      setIsFetching(false);
-    }, 600);
     
-    return () => clearTimeout(timer);
+    // 建立一個 abort controller 以處理頻繁變更
+    const controller = new AbortController();
+    
+    // 嘗試呼叫 /api/index Python API (需使用 vercel dev 啟動才會生效)
+    fetch(`/api/index?url=${encodeURIComponent(formData.postUrl)}`, { signal: controller.signal })
+      .then(res => res.json())
+      .then(response => {
+        let fetchedData = response.data || [];
+        
+        // 關鍵字過濾
+        if (formData.keyword) {
+          fetchedData = fetchedData.filter((c: any) => c.text.toLowerCase().includes(formData.keyword.toLowerCase()));
+        }
+        
+        // 去除重複帳號
+        if (formData.removeDuplicates) {
+          const unique = new Map();
+          fetchedData.forEach((c: any) => {
+            if (!unique.has(c.username)) unique.set(c.username, c);
+          });
+          fetchedData = Array.from(unique.values());
+        }
+        
+        setParticipants(fetchedData);
+        setIsFetching(false);
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        
+        // 萬一 Python API 沒開 (例如直接用 npm run dev 啟動)，降級退回模擬假資料
+        console.warn("API 請求失敗，退回前端模擬資料模式");
+        setTimeout(() => {
+          let filtered = [...MOCK_COMMENTS];
+          if (formData.keyword) filtered = filtered.filter(c => c.text.toLowerCase().includes(formData.keyword.toLowerCase()));
+          if (formData.removeDuplicates) {
+            const unique = new Map();
+            filtered.forEach(c => {
+              if (!unique.has(c.username)) unique.set(c.username, c);
+            });
+            filtered = Array.from(unique.values());
+          }
+           setParticipants(filtered);
+           setIsFetching(false);
+        }, 500);
+      });
+      
+    return () => controller.abort();
   }, [formData.postUrl, formData.keyword, formData.removeDuplicates]);
 
   const handleStartDraw = () => {
