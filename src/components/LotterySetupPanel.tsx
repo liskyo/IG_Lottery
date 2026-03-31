@@ -215,9 +215,14 @@ const LotterySetupPanel = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      {/* 自訂專屬背景圖 (設定 15% 透明度與混色校正) */}
+      <div 
+        className="absolute inset-0 z-[1] pointer-events-none bg-cover bg-center bg-no-repeat opacity-15 mix-blend-multiply filter blur-[1px]"
+        style={{ backgroundImage: "url('/bg.png')", backgroundSize: 'cover' }}
+      />
       <BackgroundEffects />
-
-      <div className="max-w-xl w-full bg-white/60 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] rounded-3xl p-8 relative z-10 transition-transform duration-500 hover:shadow-[0_16px_48px_rgba(31,38,135,0.1)]">
+      
+      <div className="max-w-xl w-full bg-white/65 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] rounded-3xl p-8 relative z-10 transition-transform duration-500 hover:shadow-[0_16px_48px_rgba(31,38,135,0.1)]">
 
         <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-fuchsia-300 rounded-full mix-blend-multiply filter blur-[50px] opacity-40 animate-pulse"></div>
         <div className="absolute bottom-[-50px] left-[-50px] w-48 h-48 bg-cyan-300 rounded-full mix-blend-multiply filter blur-[50px] opacity-40 animate-pulse" style={{ animationDelay: '1s' }}></div>
