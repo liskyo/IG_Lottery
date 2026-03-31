@@ -474,8 +474,8 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
         style={{ zIndex: 10 }}
       />
       
-      {/* 中心開獎卡片 (移除玻璃模糊背景，完全透出 bg3) */}
-      <div className="w-full max-w-2xl bg-transparent p-8 sm:p-14 relative text-center transform animate-in zoom-in-95 duration-700 z-20">
+      {/* 中心開獎卡片 (加上深色毛玻璃濾鏡，確保在強光背景下文字依然極度清晰) */}
+      <div className="w-full max-w-2xl bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 sm:p-14 shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative text-center transform animate-in zoom-in-95 duration-700 z-20">
         
         <button 
           onClick={onClose}
@@ -483,10 +483,10 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
         >✕</button>
 
         <div className="inline-flex items-center justify-center p-3 sm:mb-2 text-yellow-300 animate-bounce">
-          <Sparkles className="w-12 h-12 filter drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" />
+          <Sparkles className="w-12 h-12 filter drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]" />
         </div>
 
-        <h2 className="text-4xl sm:text-6xl font-black mb-10 text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-pink-200 to-amber-200 animate-gradient bg-[length:200%_auto] drop-shadow-[0_0_15px_rgba(255,255,255,0.7)]">
+        <h2 className="text-4xl sm:text-6xl font-black mb-10 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-amber-300 animate-gradient bg-[length:200%_auto] drop-shadow-[0_4px_15px_rgba(0,0,0,0.9)]">
            🎉 恭喜幸運兒 🎉
         </h2>
 
