@@ -215,9 +215,9 @@ const LotterySetupPanel = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
-      {/* 自訂專屬背景圖 (設定 50% 透明度) */}
+      {/* 自訂專屬背景圖 (設定 100% 透明度) */}
       <div 
-        className="absolute inset-0 z-[1] pointer-events-none bg-cover bg-center bg-no-repeat opacity-50"
+        className="absolute inset-0 z-[1] pointer-events-none bg-cover bg-center bg-no-repeat opacity-100"
         style={{ backgroundImage: "url('/bg.png')" }}
       />
       <BackgroundEffects />
