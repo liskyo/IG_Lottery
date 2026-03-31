@@ -1,6 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { Sparkles, Users, Link as LinkIcon, Snowflake, Gem, Hexagon, ListChecks, Loader2, UploadCloud, FileJson, Download } from 'lucide-react';
 import Papa from 'papaparse';
+import Confetti from 'react-confetti';
+
+// 方便取得目前視窗大小給 Confetti 使用
+function useWindowSize() {
+  const [size, setSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  useEffect(() => {
+    const handleResize = () => setSize({ width: window.innerWidth, height: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return size;
+}
 
 const BackgroundEffects = () => {
   const [elements, setElements] = useState<{ id: number; left: string; delay: string; duration: string; size: number; type: 'gem' | 'snow' | 'hex' }[]>([]);
@@ -79,9 +91,9 @@ const LotterySetupPanel = () => {
 
   const [isFetching, setIsFetching] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
-  
+
   // 抽獎結果 State
-  const [drawResults, setDrawResults] = useState<{winners: any[], backups: any[]} | null>(null);
+  const [drawResults, setDrawResults] = useState<{ winners: any[], backups: any[] } | null>(null);
 
   const [uploadFileName, setUploadFileName] = useState('');
 
@@ -213,11 +225,11 @@ const LotterySetupPanel = () => {
     setTimeout(() => {
       // 隨機打亂陣列 (簡單的 Fisher-Yates 變體)
       const shuffled = [...participants].sort(() => 0.5 - Math.random());
-      
+
       // 取出正取與候補
       const winners = shuffled.slice(0, formData.winnerCount);
       const backups = shuffled.slice(formData.winnerCount, formData.winnerCount + formData.backupCount);
-      
+
       setDrawResults({ winners, backups });
       setIsDrawing(false);
     }, 2500);
@@ -226,12 +238,12 @@ const LotterySetupPanel = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
       {/* 自訂專屬背景圖 (設定 100% 透明度) */}
-      <div 
+      <div
         className="absolute inset-0 z-[1] pointer-events-none bg-cover bg-center bg-no-repeat opacity-100"
         style={{ backgroundImage: "url('/bg3.png')" }}
       />
       <BackgroundEffects />
-      
+
       <div className="max-w-xl w-full bg-white/65 backdrop-blur-2xl border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.07)] rounded-3xl p-8 relative z-10 transition-transform duration-500 hover:shadow-[0_16px_48px_rgba(31,38,135,0.1)]">
 
         <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-fuchsia-300 rounded-full mix-blend-multiply filter blur-[50px] opacity-40 animate-pulse"></div>
@@ -243,7 +255,7 @@ const LotterySetupPanel = () => {
               <Gem className="w-8 h-8 text-fuchsia-500 mr-2" />
               <Snowflake className="w-6 h-6 text-cyan-400 group-hover:rotate-180 transition-transform duration-700" />
             </div>
-            <h2 
+            <h2
               className="text-3xl sm:text-4xl font-black bg-clip-text text-transparent tracking-tight animate-gradient bg-[length:200%_auto] pb-2 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)]"
               style={{ backgroundImage: 'linear-gradient(to right, #fef08a, #f472b6, #d946ef, #a855f7, #fef08a)' }}
             >
@@ -419,7 +431,7 @@ const LotterySetupPanel = () => {
                 {isDrawing ? (
                   <>
                     <Loader2 className="animate-spin h-6 w-6 text-white" />
-                    <span>開採幸運兒水晶中...</span>
+                    <span>幸運兒產生中...</span>
                   </>
                 ) : (
                   <>
@@ -435,67 +447,85 @@ const LotterySetupPanel = () => {
       </div>
 
       {/* 🌟 炫酷中獎名單 Modal 🌟 */}
-      {drawResults && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-500">
-          
-          {/* 背景光暈爆炸效果 */}
-          <div className="absolute inset-0 z-[-1] pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] sm:w-[800px] sm:h-[800px] bg-gradient-to-tr from-fuchsia-500/40 via-pink-500/20 to-cyan-500/40 rounded-full blur-[80px] animate-pulse"></div>
-          </div>
-          
-          <div className="w-full max-w-2xl bg-white/10 border border-white/30 backdrop-blur-2xl rounded-3xl p-8 sm:p-14 shadow-[0_0_80px_rgba(236,72,153,0.4)] relative text-center transform animate-in zoom-in-95 duration-700">
-            
-            <button 
-              onClick={() => setDrawResults(null)}
-              className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/30 text-white font-black transition-colors"
-            >✕</button>
+      {drawResults && <WinnerModal drawResults={drawResults} onClose={() => setDrawResults(null)} />}
 
-            <div className="inline-flex items-center justify-center p-3 sm:mb-2 text-yellow-300 animate-bounce">
-              <Sparkles className="w-10 h-10" />
-            </div>
+    </div>
+  );
+};
 
-            <h2 className="text-4xl sm:text-6xl font-black mb-10 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-400 to-fuchsia-400 animate-gradient bg-[length:200%_auto] drop-shadow-[0_0_20px_rgba(250,204,21,0.6)]">
-               🎉 恭喜幸運兒 🎉
-            </h2>
+const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], backups: any[]}, onClose: () => void }) => {
+  const { width, height } = useWindowSize();
 
-            {/* 正取名單 */}
-            <div className="space-y-4 mb-10 min-h-[120px]">
-              <h3 className="text-xl sm:text-2xl font-black text-cyan-200 tracking-[0.2em] uppercase opacity-90 mb-4 drop-shadow-md">
-                ✦ 正取名單 ✦
-              </h3>
-              <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
-                {drawResults.winners.map((w, i) => (
-                  <div key={i} className="bg-gradient-to-br from-white/20 to-white/5 border border-white/50 px-6 py-4 sm:px-8 sm:py-5 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.3)] hover:scale-110 transition-transform duration-300 group relative overflow-hidden">
-                    <div className="absolute inset-0 bg-white/20 group-hover:bg-white/0 transition-colors pointer-events-none"></div>
-                    <div className="text-2xl sm:text-3xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-                      {w.username}
-                    </div>
-                  </div>
-                ))}
+  return (
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cover bg-center animate-in fade-in duration-500 overflow-hidden"
+      style={{ backgroundImage: "url('/bg3.png')" }}
+    >
+      {/* 黑色半透明疊加層，確保能在任何背景色上凸顯文字 */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm pointer-events-none"></div>
+
+      {/* 豪華灑落紙花與綵帶效果 */}
+      <Confetti
+        width={width}
+        height={height}
+        recycle={true}
+        numberOfPieces={300}
+        gravity={0.12}
+        colors={['#fde047', '#f472b6', '#d946ef', '#a855f7', '#67e8f9', '#ffffff']}
+        style={{ zIndex: 10 }}
+      />
+      
+      {/* 中心開獎卡片 */}
+      <div className="w-full max-w-2xl bg-white/10 border border-white/40 backdrop-blur-2xl rounded-3xl p-8 sm:p-14 shadow-[0_0_60px_rgba(255,150,200,0.3)] relative text-center transform animate-in zoom-in-95 duration-700 z-20">
+        
+        <button 
+          onClick={onClose}
+          className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white font-black shadow-lg transition-colors cursor-pointer"
+        >✕</button>
+
+        <div className="inline-flex items-center justify-center p-3 sm:mb-2 text-yellow-300 animate-bounce">
+          <Sparkles className="w-12 h-12 filter drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]" />
+        </div>
+
+        <h2 className="text-4xl sm:text-6xl font-black mb-10 text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-pink-200 to-amber-200 animate-gradient bg-[length:200%_auto] drop-shadow-[0_0_15px_rgba(255,255,255,0.7)]">
+           🎉 恭喜幸運兒 🎉
+        </h2>
+
+        {/* 正取名單 */}
+        <div className="space-y-4 mb-10 min-h-[120px]">
+          <h3 className="text-xl sm:text-2xl font-black text-yellow-200 tracking-[0.2em] uppercase opacity-90 mb-4 drop-shadow-[0_0_8px_rgba(253,224,71,0.5)]">
+            ✦ 正取名單 ✦
+          </h3>
+          <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
+            {drawResults.winners.map((w: any, i: number) => (
+              <div key={i} className="bg-gradient-to-br from-white/30 to-white/10 border border-yellow-200/50 px-6 py-4 sm:px-8 sm:py-5 rounded-2xl shadow-[0_8px_25px_rgba(253,224,71,0.2)] hover:scale-110 transition-transform duration-300 group relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 group-hover:bg-white/0 transition-colors pointer-events-none"></div>
+                <div className="text-2xl sm:text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.9)]">
+                  {w.username}
+                </div>
               </div>
-            </div>
-
-            {/* 候補名單 (角落小字) */}
-            {drawResults.backups.length > 0 && (
-              <div className="mt-12 pt-6 border-t border-white/20 text-right opacity-80 pl-8">
-                 <h3 className="text-sm border-l-4 border-fuchsia-400 pl-2 font-bold text-slate-300 mb-3 tracking-widest text-left">
-                   候補梯隊
-                 </h3>
-                 <div className="flex flex-wrap justify-start gap-3">
-                   {drawResults.backups.map((b, i) => (
-                     <div key={i} className="bg-black/30 border border-white/20 px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-200">
-                       <span className="text-fuchsia-400 mr-1">#{i + 1}</span> 
-                       {b.username}
-                     </div>
-                   ))}
-                 </div>
-              </div>
-            )}
-            
+            ))}
           </div>
         </div>
-      )}
 
+        {/* 候補名單 (角落小字) */}
+        {drawResults.backups.length > 0 && (
+          <div className="mt-12 pt-6 border-t border-white/30 text-right opacity-90 pl-8">
+             <h3 className="text-sm border-l-4 border-yellow-300 pl-2 font-bold text-slate-200 mb-3 tracking-widest text-left drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+               候補梯隊
+             </h3>
+             <div className="flex flex-wrap justify-start gap-3">
+               {drawResults.backups.map((b: any, i: number) => (
+                 <div key={i} className="bg-black/40 border border-white/30 px-3 py-1.5 rounded-lg text-sm font-semibold text-white drop-shadow-md">
+                   <span className="text-yellow-300 mr-1 opacity-80">#{i + 1}</span> 
+                   {b.username}
+                 </div>
+               ))}
+             </div>
+          </div>
+        )}
+        
+      </div>
     </div>
   );
 };
