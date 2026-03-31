@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Sparkles, Info, Users, Link as LinkIcon, Snowflake, Gem, Hexagon, ListChecks, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Sparkles, Info, Users, Link as LinkIcon, Snowflake, Gem, Hexagon, ListChecks, Loader2, UploadCloud, FileJson, Download } from 'lucide-react';
+import Papa from 'papaparse';
 
 const BackgroundEffects = () => {
   const [elements, setElements] = useState<{ id: number; left: string; delay: string; duration: string; size: number; type: 'gem' | 'snow' | 'hex' }[]>([]);
@@ -48,7 +49,6 @@ const BackgroundEffects = () => {
   );
 };
 
-// 模擬的 IG 留言資料庫
 const MOCK_COMMENTS = [
   { id: 1, username: 'crystal_lover99', text: '我要抽水晶！太美了✨' },
   { id: 2, username: 'gem_hunter', text: '選我選我 #我要抽水晶' },
@@ -63,7 +63,9 @@ const MOCK_COMMENTS = [
 ];
 
 const LotterySetupPanel = () => {
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [mode, setMode] = useState<'url' | 'file'>('url');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [formData, setFormData] = useState({
     postUrl: '',
     winnerCount: 1,
@@ -72,70 +74,131 @@ const LotterySetupPanel = () => {
     keyword: ''
   });
 
-  const [participants, setParticipants] = useState<{username: string, text: string}[]>([]);
+  const [rawComments, setRawComments] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<any[]>([]);
+  
   const [isFetching, setIsFetching] = useState(false);
+  const [isDrawing, setIsDrawing] = useState(false);
+  
+  const [uploadFileName, setUploadFileName] = useState('');
 
-  // 當網址、關鍵字或去重設定改變時，即時更新名單
+  // 1. 抓取資料 (URL 模式)
   useEffect(() => {
+    if (mode !== 'url') return;
     if (!formData.postUrl) {
-      setParticipants([]);
+      setRawComments([]);
       return;
     }
     
     setIsFetching(true);
-    
-    // 建立一個 abort controller 以處理頻繁變更
     const controller = new AbortController();
     
-    // 嘗試呼叫 /api/index Python API (需使用 vercel dev 啟動才會生效)
     fetch(`/api/index?url=${encodeURIComponent(formData.postUrl)}`, { signal: controller.signal })
       .then(res => res.json())
       .then(response => {
-        let fetchedData = response.data || [];
-        
-        // 關鍵字過濾
-        if (formData.keyword) {
-          fetchedData = fetchedData.filter((c: any) => c.text.toLowerCase().includes(formData.keyword.toLowerCase()));
-        }
-        
-        // 去除重複帳號
-        if (formData.removeDuplicates) {
-          const unique = new Map();
-          fetchedData.forEach((c: any) => {
-            if (!unique.has(c.username)) unique.set(c.username, c);
-          });
-          fetchedData = Array.from(unique.values());
-        }
-        
-        setParticipants(fetchedData);
+        setRawComments(response.data || []);
         setIsFetching(false);
       })
       .catch(err => {
         if (err.name === 'AbortError') return;
-        
-        // 萬一 Python API 沒開 (例如直接用 npm run dev 啟動)，降級退回模擬假資料
-        console.warn("API 請求失敗，退回前端模擬資料模式");
+        console.warn("API 請求失敗，退回前端模擬資料");
         setTimeout(() => {
-          let filtered = [...MOCK_COMMENTS];
-          if (formData.keyword) filtered = filtered.filter(c => c.text.toLowerCase().includes(formData.keyword.toLowerCase()));
-          if (formData.removeDuplicates) {
-            const unique = new Map();
-            filtered.forEach(c => {
-              if (!unique.has(c.username)) unique.set(c.username, c);
-            });
-            filtered = Array.from(unique.values());
-          }
-           setParticipants(filtered);
-           setIsFetching(false);
+          setRawComments([...MOCK_COMMENTS]);
+          setIsFetching(false);
         }, 500);
       });
       
     return () => controller.abort();
-  }, [formData.postUrl, formData.keyword, formData.removeDuplicates]);
+  }, [formData.postUrl, mode]);
+
+  // 2. 處理檔案上傳 (File 模式)
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadFileName(file.name);
+    setIsFetching(true);
+    const reader = new FileReader();
+
+    if (file.name.endsWith('.csv')) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const parsed = results.data.map((row: any) => ({
+             username: row['Username'] || row['username'] || row['Owner'] || row['User'] || row['帳號'] || 'Unknown',
+             text: row['Text'] || row['text'] || row['Comment'] || row['留言'] || JSON.stringify(row)
+          }));
+          setRawComments(parsed);
+          setIsFetching(false);
+        }
+      });
+    } else if (file.name.endsWith('.json')) {
+      reader.onload = (ev) => {
+        try {
+          const json = JSON.parse(ev.target?.result as string);
+          const dataArray = Array.isArray(json) ? json : (json.data || json.comments || []);
+          const parsed = dataArray.map((row: any) => ({
+             username: row.username || row.owner?.username || row.user?.username || 'Unknown',
+             text: row.text || row.comment || ''
+          }));
+          setRawComments(parsed);
+        } catch(e) {
+          alert('JSON 解析失敗，請確認格式');
+        }
+        setIsFetching(false);
+      };
+      reader.readAsText(file);
+    } else {
+      alert('僅支援 .csv 或 .json 格式檔案！');
+      setIsFetching(false);
+    }
+  };
+
+  // 3. 通用過濾邏輯 (不論資料來源)
+  useEffect(() => {
+    let filtered = [...rawComments];
+    
+    // 關鍵字過濾
+    if (formData.keyword) {
+      filtered = filtered.filter((c: any) => c.text.toLowerCase().includes(formData.keyword.toLowerCase()));
+    }
+    
+    // 去除重複帳號
+    if (formData.removeDuplicates) {
+      const unique = new Map();
+      filtered.forEach((c: any) => {
+        if (!unique.has(c.username)) unique.set(c.username, c);
+      });
+      filtered = Array.from(unique.values());
+    }
+    
+    setParticipants(filtered);
+  }, [rawComments, formData.keyword, formData.removeDuplicates]);
+
+  // 4. 匯出 CSV 功能
+  const exportToCSV = () => {
+    if (participants.length === 0) {
+      alert('目前沒有資料可以匯出唷！');
+      return;
+    }
+    // 使用 PapaParse 將過濾後的名單轉成 CSV 格式
+    const csv = Papa.unparse(participants);
+    // 加入 BOM (Byte Order Mark) 確保 Excel 打開中文不會亂碼
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); 
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `水晶抽獎名單_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
 
   const handleStartDraw = () => {
-    if (!formData.postUrl) {
+    if (mode === 'url' && !formData.postUrl) {
       alert('請先輸入貼文網址！');
+      return;
+    }
+    if (mode === 'file' && rawComments.length === 0) {
+      alert('請先上傳留言檔案！');
       return;
     }
     if (participants.length === 0) {
@@ -144,10 +207,9 @@ const LotterySetupPanel = () => {
     }
     
     setIsDrawing(true);
-    // 模擬後端開獎時間
     setTimeout(() => {
       setIsDrawing(false);
-      alert(`🎉 開獎完成！從 ${participants.length} 位名單中抽出了 ${formData.winnerCount} 位正取。 (此為前端展示)`);
+      alert(`🎉 開獎完成！從 ${participants.length} 位名單中抽出了 ${formData.winnerCount} 位正取。`);
     }, 2500);
   };
 
@@ -161,7 +223,7 @@ const LotterySetupPanel = () => {
         <div className="absolute bottom-[-50px] left-[-50px] w-48 h-48 bg-cyan-300 rounded-full mix-blend-multiply filter blur-[50px] opacity-40 animate-pulse" style={{ animationDelay: '1s' }}></div>
 
         <div className="relative z-20">
-          <div className="text-center mb-8">
+          <div className="text-center mb-6">
             <div className="inline-flex items-center justify-center p-3 bg-white/80 rounded-2xl shadow-sm border border-white mb-4">
               <Gem className="w-8 h-8 text-fuchsia-500 mr-2" />
               <Snowflake className="w-6 h-6 text-cyan-400 group-hover:rotate-180 transition-transform duration-700" />
@@ -171,45 +233,89 @@ const LotterySetupPanel = () => {
             </h2>
           </div>
 
+          {/* 模式切換按鈕 */}
+          <div className="flex bg-white/50 backdrop-blur-md p-1 rounded-xl shadow-inner mb-6 border border-white/50">
+            <button
+              onClick={() => { setMode('url'); setRawComments([]); setUploadFileName(''); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'url' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] text-indigo-700' : 'text-slate-500 hover:bg-white/40'}`}
+            >
+              <LinkIcon className="w-4 h-4" /> 貼文網址 (API)
+            </button>
+            <button
+              onClick={() => { setMode('file'); setRawComments([]); setFormData(prev => ({...prev, postUrl: ''})); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-bold transition-all ${mode === 'file' ? 'bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)] text-indigo-700' : 'text-slate-500 hover:bg-white/40'}`}
+            >
+              <FileJson className="w-4 h-4" /> 上傳 CSV/JSON
+            </button>
+          </div>
+
           <div className="space-y-6">
             
-            {/* 貼文網址 */}
-            <div className="group">
-              <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
-                <LinkIcon className="w-4 h-4 text-indigo-500 group-hover:scale-110 transition-transform" />
-                Instagram 貼文 URL
-              </label>
-              <input 
-                type="text"
-                placeholder="貼上網址自動抓取留言 (例如: https://...)"
-                className="w-full px-5 py-3.5 rounded-xl border border-white/80 bg-white/70 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
-                value={formData.postUrl}
-                onChange={(e) => setFormData({...formData, postUrl: e.target.value})}
-              />
-            </div>
+            {/* 來源輸入區塊 */}
+            {mode === 'url' ? (
+              <div className="group animate-in fade-in slide-in-from-left-4 duration-300">
+                <input 
+                  type="text"
+                  placeholder="貼上完整網址自動抓取留言 (例如: https://...)"
+                  className="w-full px-5 py-3.5 rounded-xl border border-white/80 bg-white/70 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02)] focus:bg-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-400 transition-all outline-none text-slate-700 font-medium placeholder:text-slate-400"
+                  value={formData.postUrl}
+                  onChange={(e) => setFormData({...formData, postUrl: e.target.value})}
+                />
+              </div>
+            ) : (
+              <div className="group animate-in fade-in slide-in-from-right-4 duration-300">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`w-full border-2 border-dashed ${uploadFileName ? 'border-indigo-400 bg-indigo-50/50' : 'border-indigo-200 bg-white/50 hover:bg-white/80'} rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all hover:border-indigo-400`}
+                >
+                  <UploadCloud className={`w-10 h-10 mb-2 ${uploadFileName ? 'text-indigo-500' : 'text-slate-400'}`} />
+                  <p className="text-sm font-bold text-slate-700">
+                    {uploadFileName || '點擊上傳 CSV 或 JSON 檔案'}
+                  </p>
+                  {!uploadFileName && <p className="text-xs text-slate-400 mt-1">系統將自動分析欄位自動抓取帳號與留言</p>}
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileUpload} 
+                  accept=".csv,.json" 
+                  className="hidden" 
+                />
+              </div>
+            )}
 
             {/* 即時名單預覽區塊 */}
-            {formData.postUrl && (
+            {(mode === 'url' ? formData.postUrl : rawComments.length > 0) && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="flex items-center justify-between mb-2 mt-1">
                   <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2">
                     <ListChecks className="w-4 h-4" />
                     目前符合資格名單
                   </h3>
-                  <span className="bg-indigo-100/80 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full border border-indigo-200/50 shadow-sm">
-                    共 {isFetching ? '...' : participants.length} 人
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {participants.length > 0 && (
+                      <button 
+                        onClick={exportToCSV}
+                        className="text-xs bg-white text-indigo-600 font-bold px-3 py-1.5 rounded-lg border border-indigo-200 hover:bg-indigo-50 transition-colors flex items-center gap-1 shadow-sm active:scale-95"
+                      >
+                         <Download className="w-3.5 h-3.5" /> 匯出名單
+                      </button>
+                    )}
+                    <span className="bg-indigo-100/80 text-indigo-700 text-xs font-bold px-3 py-1.5 rounded-full border border-indigo-200/50 shadow-sm">
+                      共 {isFetching ? '...' : participants.length} 人
+                    </span>
+                  </div>
                 </div>
                 
                 <div className="bg-white/40 border border-white/60 rounded-xl h-[180px] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-indigo-200 scrollbar-track-transparent shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
                   {isFetching ? (
                     <div className="h-full flex items-center justify-center text-indigo-500 text-sm font-bold gap-2">
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      光速撈取留言中...
+                      光速解析名單中...
                     </div>
                   ) : participants.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-slate-500 text-sm font-medium">
-                      沒有符合條件的留言 😢
+                      {rawComments.length === 0 ? '沒有匯入任何資料 😢' : '沒有符合過濾條件的留言 😢'}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -284,27 +390,18 @@ const LotterySetupPanel = () => {
               </div>
             </div>
 
-            {/* 防呆提示 */}
-            <div className="bg-amber-50/90 backdrop-blur-sm border border-amber-200 rounded-2xl p-5 flex gap-4 items-start shadow-sm">
-              <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-              <div className="text-sm text-amber-800 leading-relaxed font-medium">
-                <strong className="font-bold block mb-1.5 text-amber-900">✨ 抽獎條件核對建議</strong>
-                受限於 Instagram 官方隱私政策，系統無法自動檢查參與者是否「已按讚」或「已分享」貼文。建議您在系統抽出得獎者後，請對方主動提供相關截圖進行人工核對，以確保活動公平性！
-              </div>
-            </div>
-
             {/* 抽獎按鈕 */}
             <button
               onClick={handleStartDraw}
-              disabled={isDrawing || !formData.postUrl || participants.length === 0}
+              disabled={isDrawing || participants.length === 0}
               className="w-full relative group overflow-hidden rounded-2xl p-[2px] mt-2 disabled:opacity-75 disabled:cursor-not-allowed shadow-lg hover:shadow-indigo-500/25 transition-all outline-none focus:ring-4 focus:ring-indigo-400/30"
             >
               <span className={`absolute inset-0 bg-gradient-to-r from-indigo-500 via-fuchsia-400 to-cyan-400 opacity-90 transition-opacity duration-300 bg-[length:200%_auto] ${isDrawing ? 'animate-gradient' : 'group-hover:opacity-100 group-hover:duration-200 group-hover:animate-gradient'}`}></span>
-              <div className={`relative bg-white/10 backdrop-blur-md px-8 py-4 rounded-[14px] flex items-center justify-center gap-3 text-white font-extrabold text-lg border border-white/20 transition-all ${!isDrawing && formData.postUrl && participants.length > 0 && 'group-hover:bg-transparent group-hover:scale-[1.02]'}`}>
+              <div className={`relative bg-white/10 backdrop-blur-md px-8 py-4 rounded-[14px] flex items-center justify-center gap-3 text-white font-extrabold text-lg border border-white/20 transition-all ${!isDrawing && participants.length > 0 && 'group-hover:bg-transparent group-hover:scale-[1.02]'}`}>
                 {isDrawing ? (
                   <>
                     <Loader2 className="animate-spin h-6 w-6 text-white" />
-                    <span>開採水晶名單中...</span>
+                    <span>開採幸運兒水晶中...</span>
                   </>
                 ) : (
                   <>
