@@ -228,7 +228,7 @@ const LotterySetupPanel = () => {
               <Gem className="w-8 h-8 text-fuchsia-500 mr-2" />
               <Snowflake className="w-6 h-6 text-cyan-400 group-hover:rotate-180 transition-transform duration-700" />
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-rose-400 to-fuchsia-500 tracking-tight animate-gradient bg-[length:200%_auto] pb-1">
+            <h2 className="text-3xl sm:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-pink-400 via-fuchsia-500 to-purple-500 tracking-tight animate-gradient bg-[length:200%_auto] pb-2 drop-shadow-[0_0_15px_rgba(236,72,153,0.8)]">
               ROPU PON 感恩水晶抽獎系統
             </h2>
           </div>
