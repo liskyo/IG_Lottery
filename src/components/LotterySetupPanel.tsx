@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Sparkles, Info, Users, Link as LinkIcon, Snowflake, Gem, Hexagon, ListChecks, Loader2, UploadCloud, FileJson, Download } from 'lucide-react';
+import { Sparkles, Users, Link as LinkIcon, Snowflake, Gem, Hexagon, ListChecks, Loader2, UploadCloud, FileJson, Download } from 'lucide-react';
 import Papa from 'papaparse';
 
 const BackgroundEffects = () => {
