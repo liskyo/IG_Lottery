@@ -218,7 +218,7 @@ const LotterySetupPanel = () => {
       {/* 自訂專屬背景圖 (設定 100% 透明度) */}
       <div 
         className="absolute inset-0 z-[1] pointer-events-none bg-cover bg-center bg-no-repeat opacity-100"
-        style={{ backgroundImage: "url('/bg.png')" }}
+        style={{ backgroundImage: "url('/bg2.png')" }}
       />
       <BackgroundEffects />
       
