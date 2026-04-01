@@ -61,18 +61,6 @@ const BackgroundEffects = () => {
   );
 };
 
-const MOCK_COMMENTS = [
-  { id: 1, username: 'crystal_lover99', text: '我要抽水晶！太美了✨' },
-  { id: 2, username: 'gem_hunter', text: '選我選我 #我要抽水晶' },
-  { id: 3, username: 'sparkle_girl', text: '好好看喔，真希望能抽中' },
-  { id: 4, username: 'crystal_lover99', text: '分享給朋友了 @friend，我要抽水晶' },
-  { id: 5, username: 'lucky_star', text: '我要抽水晶💎 這批貨顏色好讚' },
-  { id: 6, username: 'magic_stone', text: '真的好喜歡我要抽水晶' },
-  { id: 7, username: 'random_user', text: '路過看看，順便按個讚' },
-  { id: 8, username: 'hello_kitty', text: '卡一個，想要紫水晶串串' },
-  { id: 9, username: 'gem_hunter', text: '再留一次增加機率！我要抽水晶' },
-  { id: 10, username: 'moon_child', text: '天啊我也想要抽水晶～～～' },
-];
 
 const LotterySetupPanel = () => {
   const [mode, setMode] = useState<'url' | 'file'>('url');
