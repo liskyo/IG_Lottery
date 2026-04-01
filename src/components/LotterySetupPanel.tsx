@@ -98,7 +98,7 @@ const LotterySetupPanel = () => {
     setApiError(null);
     const controller = new AbortController();
 
-    fetch(`/api/index?url=${encodeURIComponent(formData.postUrl)}`, { signal: controller.signal })
+    fetch(`/api?url=${encodeURIComponent(formData.postUrl)}`, { signal: controller.signal })
       .then(res => res.json())
       .then(response => {
         if (response.success) {

@@ -27,12 +27,12 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # 優先從環境變數取得手動設定的 IG 商業帳號 ID (17841...)
+            # 優先從環境變數取得手動設定的 IG 商業帳號 ID
             ig_biz_id = os.environ.get('IG_BIZ_ID')
             
             # 如果沒設定或是自動尋找
             if not ig_biz_id:
-                # 策略 1: 直接問 "me" (如果 access_token 是 Page Token，這會直接回傳該專頁的 IG ID)
+                # 策略 1: 直接問 "me"
                 me_direct_res = requests.get(
                     f"https://graph.facebook.com/v19.0/me?fields=instagram_business_account&access_token={access_token}"
                 )
@@ -41,7 +41,7 @@ class handler(BaseHTTPRequestHandler):
                     ig_biz_id = me_direct['instagram_business_account']['id']
             
             if not ig_biz_id:
-                # 策略 2: 掃描用戶管理的所有粉專 (User Token 邏輯)
+                # 策略 2: 掃描用戶管理的所有粉專
                 me_accounts_res = requests.get(
                     f"https://graph.facebook.com/v19.0/me/accounts?fields=name,instagram_business_account&access_token={access_token}"
                 )
@@ -52,24 +52,25 @@ class handler(BaseHTTPRequestHandler):
                         if 'instagram_business_account' in page:
                             ig_biz_id = page['instagram_business_account']['id']
                             break
+                elif 'error' in me_accounts:
+                    result = {"success": False, "message": f"臉書權限查詢失敗: {me_accounts['error'].get('message')}"}
+                    self.wfile.write(json.dumps(result).encode('utf-8'))
+                    return
                 else:
-                    # 報錯時吐出更多 Debug 資訊
                     debug_info = str(me_accounts)[:200]
                     result = {
                         "success": False, 
-                        "message": f"找不到連結的 Instagram 專業帳號。您可以嘗試在 Vercel 新增環境變數 IG_BIZ_ID 並填入您剛才查到的 ID (17841463911183294)。 (Debug: {debug_info})"
+                        "message": f"找不到連結的 Instagram 專業帳號。請至 Vercel 設定 IG_BIZ_ID 為 17841463911183294。 (Debug: {debug_info})"
                     }
                     self.wfile.write(json.dumps(result).encode('utf-8'))
                     return
             
             if not ig_biz_id:
-                result = {"success": False, "message": "API 無法識別您的 Instagram Business ID，請手動設定 IG_BIZ_ID 環境變數"}
+                result = {"success": False, "message": "API 無法識別您的 Instagram Business ID，請檢查 Token 權限。"}
                 self.wfile.write(json.dumps(result).encode('utf-8'))
                 return
 
             # 步驟 B: 尋找對應網址的 Media ID
-            # 網址格式可能是 /p/XXXXX/ 或 /reels/XXXXX/ 或 /tv/XXXXX/
-            # 我們需要提取短碼 (shortcode)
             parts = target_url.strip('/').split('/')
             shortcode = ""
             if "p" in parts:
@@ -79,18 +80,20 @@ class handler(BaseHTTPRequestHandler):
             elif "tv" in parts:
                 shortcode = parts[parts.index("tv") + 1]
             else:
-                # 最後一招，取網址最後一段
                 shortcode = parts[-1]
 
-            # 抓取最近 50 篇貼文來比對 (增加搜尋範圍)
-            media_list = requests.get(
-                f"https://graph.facebook.com/v19.0/{ig_biz_id}/media?fields=permalink,shortcode&limit=50&access_token={access_token}"
+            media_list_data = requests.get(
+                f"https://graph.facebook.com/v19.0/{ig_biz_id}/media?fields=permalink,shortcode&limit=100&access_token={access_token}"
             ).json()
             
+            if 'error' in media_list_data:
+                result = {"success": False, "message": f"貼文列表讀取失敗: {media_list_data['error'].get('message')}"}
+                self.wfile.write(json.dumps(result).encode('utf-8'))
+                return
+
             media_id = None
-            if 'data' in media_list:
-                for media in media_list['data']:
-                    # 比對 Permalink 或 Shortcode
+            if 'data' in media_list_data:
+                for media in media_list_data['data']:
                     if media.get('shortcode') == shortcode or media.get('permalink', '').rstrip('/') == target_url:
                         media_id = media['id']
                         break
@@ -98,20 +101,23 @@ class handler(BaseHTTPRequestHandler):
             if not media_id:
                 result = {
                     "success": False, 
-                    "message": f"在您的前 50 篇貼文中找不到該網址 (短碼: {shortcode})。請確認貼文是否屬於此帳號，或貼文是否為公開狀態。"
+                    "message": f"在您的前 100 篇貼文中找不到該貼文 (短碼: {shortcode})。請確認該貼文是由此帳號發布的。"
                 }
                 self.wfile.write(json.dumps(result).encode('utf-8'))
                 return
 
             # 步驟 C: 抓取所有留言
-            # 抓取 1000 則
-            comments_data = requests.get(
+            comments_res_data = requests.get(
                 f"https://graph.facebook.com/v19.0/{media_id}/comments?fields=username,text&limit=1000&access_token={access_token}"
             ).json()
             
-            comments_list = comments_data.get('data', [])
+            if 'error' in comments_res_data:
+                result = {"success": False, "message": f"留言讀取失敗: {comments_res_data['error'].get('message')}"}
+                self.wfile.write(json.dumps(result).encode('utf-8'))
+                return
+
+            comments_list = comments_res_data.get('data', [])
             
-            # 回傳給前端
             result = {
                 "success": True,
                 "data": [{"username": c['username'], "text": c['text']} for c in comments_list],
@@ -120,7 +126,7 @@ class handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result).encode('utf-8'))
 
         except Exception as e:
-            result = {"success": False, "message": f"API 發生關鍵錯誤: {str(e)}"}
+            result = {"success": False, "message": f"後端程式執行出錯: {str(e)}"}
             self.wfile.write(json.dumps(result).encode('utf-8'))
 
         return
