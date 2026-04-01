@@ -381,7 +381,7 @@ const LotterySetupPanel = () => {
               <div className="group">
                 <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                   <Users className="w-4 h-4 text-slate-400 group-hover:scale-110 transition-transform" />
-                  隨機款水晶鑰匙圈得主
+                  隨機水晶鑰匙圈得主
                 </label>
                 <input
                   type="number"
