@@ -91,6 +91,7 @@ const LotterySetupPanel = () => {
 
   const [isFetching, setIsFetching] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   // 抽獎結果 State
   const [drawResults, setDrawResults] = useState<{ winners: any[], backups: any[] } | null>(null);
@@ -106,21 +107,24 @@ const LotterySetupPanel = () => {
     }
 
     setIsFetching(true);
+    setApiError(null);
     const controller = new AbortController();
 
     fetch(`/api/index?url=${encodeURIComponent(formData.postUrl)}`, { signal: controller.signal })
       .then(res => res.json())
       .then(response => {
-        setRawComments(response.data || []);
+        if (response.success) {
+          setRawComments(response.data || []);
+        } else {
+          setApiError(response.message);
+          setRawComments([]);
+        }
         setIsFetching(false);
       })
       .catch(err => {
         if (err.name === 'AbortError') return;
-        console.warn("API 請求失敗，退回前端模擬資料");
-        setTimeout(() => {
-          setRawComments([...MOCK_COMMENTS]);
-          setIsFetching(false);
-        }, 500);
+        setApiError("連線至 API 發生錯誤，請稍後再試。");
+        setIsFetching(false);
       });
 
     return () => controller.abort();
@@ -342,6 +346,11 @@ const LotterySetupPanel = () => {
                     <div className="h-full flex items-center justify-center text-indigo-500 text-sm font-bold gap-2">
                       <Loader2 className="w-5 h-5 animate-spin" />
                       光速解析名單中...
+                    </div>
+                  ) : apiError ? (
+                    <div className="h-full flex flex-col items-center justify-center p-4 text-center">
+                      <p className="text-rose-500 text-sm font-bold mb-2">⚠️ 抓取失敗</p>
+                      <p className="text-slate-500 text-xs">{apiError}</p>
                     </div>
                   ) : participants.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-slate-500 text-sm font-medium">
