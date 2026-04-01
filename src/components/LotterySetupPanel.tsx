@@ -368,7 +368,7 @@ const LotterySetupPanel = () => {
               <div className="group">
                 <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                   <Users className="w-4 h-4 text-cyan-500 group-hover:scale-110 transition-transform" />
-                  正取人數
+                  客製化水晶飾品得主
                 </label>
                 <input
                   type="number"
@@ -381,7 +381,7 @@ const LotterySetupPanel = () => {
               <div className="group">
                 <label className="block text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
                   <Users className="w-4 h-4 text-slate-400 group-hover:scale-110 transition-transform" />
-                  候補人數
+                  隨機款水晶鑰匙圈得主
                 </label>
                 <input
                   type="number"
@@ -450,11 +450,11 @@ const LotterySetupPanel = () => {
   );
 };
 
-const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], backups: any[]}, onClose: () => void }) => {
+const WinnerModal = ({ drawResults, onClose }: { drawResults: { winners: any[], backups: any[] }, onClose: () => void }) => {
   const { width, height } = useWindowSize();
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cover bg-center animate-in fade-in duration-500 overflow-hidden"
       style={{ backgroundImage: "url('/bg3.png')" }}
     >
@@ -470,11 +470,11 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
         colors={['#fde047', '#f472b6', '#d946ef', '#a855f7', '#67e8f9', '#ffffff']}
         style={{ zIndex: 10 }}
       />
-      
+
       {/* 中心開獎卡片 (加上深色毛玻璃濾鏡，確保在強光背景下文字依然極度清晰) */}
       <div className="w-full max-w-2xl bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-8 sm:p-14 shadow-[0_20px_50px_rgba(0,0,0,0.6)] relative text-center transform animate-in zoom-in-95 duration-700 z-20">
-        
-        <button 
+
+        <button
           onClick={onClose}
           className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white font-black shadow-lg transition-colors cursor-pointer"
         >✕</button>
@@ -484,7 +484,7 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
         </div>
 
         <h2 className="text-4xl sm:text-6xl font-black mb-10 text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-300 to-amber-300 animate-gradient bg-[length:200%_auto] drop-shadow-[0_4px_15px_rgba(0,0,0,0.9)]">
-           🎉 恭喜幸運兒 🎉
+          🎉 恭喜幸運兒 🎉
         </h2>
 
         {/* 正取名單 */}
@@ -507,20 +507,20 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: {winners: any[], b
         {/* 候補名單 (角落小字) */}
         {drawResults.backups.length > 0 && (
           <div className="mt-12 pt-6 border-t border-white/30 text-right opacity-90 pl-8">
-             <h3 className="text-sm border-l-4 border-yellow-300 pl-2 font-bold text-slate-200 mb-3 tracking-widest text-left drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-               候補梯隊
-             </h3>
-             <div className="flex flex-wrap justify-start gap-3">
-               {drawResults.backups.map((b: any, i: number) => (
-                 <div key={i} className="bg-black/40 border border-white/30 px-3 py-1.5 rounded-lg text-sm font-semibold text-white drop-shadow-md">
-                   <span className="text-yellow-300 mr-1 opacity-80">#{i + 1}</span> 
-                   {b.username}
-                 </div>
-               ))}
-             </div>
+            <h3 className="text-sm border-l-4 border-yellow-300 pl-2 font-bold text-slate-200 mb-3 tracking-widest text-left drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
+              候補梯隊
+            </h3>
+            <div className="flex flex-wrap justify-start gap-3">
+              {drawResults.backups.map((b: any, i: number) => (
+                <div key={i} className="bg-black/40 border border-white/30 px-3 py-1.5 rounded-lg text-sm font-semibold text-white drop-shadow-md">
+                  <span className="text-yellow-300 mr-1 opacity-80">#{i + 1}</span>
+                  {b.username}
+                </div>
+              ))}
+            </div>
           </div>
         )}
-        
+
       </div>
     </div>
   );
