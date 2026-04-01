@@ -490,7 +490,7 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: { winners: any[], 
         {/* 正取名單 */}
         <div className="space-y-4 mb-10 min-h-[120px]">
           <h3 className="text-xl sm:text-2xl font-black text-yellow-200 tracking-[0.2em] uppercase opacity-90 mb-4 drop-shadow-[0_0_8px_rgba(253,224,71,0.5)]">
-            ✦ 正取名單 ✦
+            ✦ 客製化水晶飾品得主 ✦
           </h3>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-6">
             {drawResults.winners.map((w: any, i: number) => (
@@ -508,7 +508,7 @@ const WinnerModal = ({ drawResults, onClose }: { drawResults: { winners: any[], 
         {drawResults.backups.length > 0 && (
           <div className="mt-12 pt-6 border-t border-white/30 text-right opacity-90 pl-8">
             <h3 className="text-sm border-l-4 border-yellow-300 pl-2 font-bold text-slate-200 mb-3 tracking-widest text-left drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">
-              候補梯隊
+              隨機水晶鑰匙圈得主
             </h3>
             <div className="flex flex-wrap justify-start gap-3">
               {drawResults.backups.map((b: any, i: number) => (
