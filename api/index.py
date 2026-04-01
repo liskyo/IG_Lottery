@@ -27,36 +27,43 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            # 步驟 A: 強力尋找 Instagram Business 帳號 ID
-            # 我們會掃描用戶管理的所有粉專，找出有連結 IG 的那個
-            me_accounts_res = requests.get(
-                f"https://graph.facebook.com/v19.0/me/accounts?fields=name,instagram_business_account&access_token={access_token}"
-            )
-            me_accounts = me_accounts_res.json()
+            # 優先從環境變數取得手動設定的 IG 商業帳號 ID (17841...)
+            ig_biz_id = os.environ.get('IG_BIZ_ID')
             
-            ig_biz_id = None
-            if 'data' in me_accounts:
-                for page in me_accounts['data']:
-                    if 'instagram_business_account' in page:
-                        ig_biz_id = page['instagram_business_account']['id']
-                        print(f"Found IG Biz ID: {ig_biz_id} from Page: {page.get('name')}")
-                        break
-            
-            # 如果 me/accounts 找不到，試試 me 直接取得 (某些情況下)
+            # 如果沒設定或是自動尋找
             if not ig_biz_id:
-                me_direct = requests.get(
+                # 策略 1: 直接問 "me" (如果 access_token 是 Page Token，這會直接回傳該專頁的 IG ID)
+                me_direct_res = requests.get(
                     f"https://graph.facebook.com/v19.0/me?fields=instagram_business_account&access_token={access_token}"
-                ).json()
+                )
+                me_direct = me_direct_res.json()
                 if 'instagram_business_account' in me_direct:
                     ig_biz_id = me_direct['instagram_business_account']['id']
             
             if not ig_biz_id:
-                # 報錯時吐出更多 Debug 資訊
-                debug_info = str(me_accounts)[:200]
-                result = {
-                    "success": False, 
-                    "message": f"找不到連結的 Instagram 專業帳號。請確認您是粉專管理員，且產 Token 時已勾選該專頁。 (Debug: {debug_info})"
-                }
+                # 策略 2: 掃描用戶管理的所有粉專 (User Token 邏輯)
+                me_accounts_res = requests.get(
+                    f"https://graph.facebook.com/v19.0/me/accounts?fields=name,instagram_business_account&access_token={access_token}"
+                )
+                me_accounts = me_accounts_res.json()
+                
+                if 'data' in me_accounts and len(me_accounts['data']) > 0:
+                    for page in me_accounts['data']:
+                        if 'instagram_business_account' in page:
+                            ig_biz_id = page['instagram_business_account']['id']
+                            break
+                else:
+                    # 報錯時吐出更多 Debug 資訊
+                    debug_info = str(me_accounts)[:200]
+                    result = {
+                        "success": False, 
+                        "message": f"找不到連結的 Instagram 專業帳號。您可以嘗試在 Vercel 新增環境變數 IG_BIZ_ID 並填入您剛才查到的 ID (17841463911183294)。 (Debug: {debug_info})"
+                    }
+                    self.wfile.write(json.dumps(result).encode('utf-8'))
+                    return
+            
+            if not ig_biz_id:
+                result = {"success": False, "message": "API 無法識別您的 Instagram Business ID，請手動設定 IG_BIZ_ID 環境變數"}
                 self.wfile.write(json.dumps(result).encode('utf-8'))
                 return
 
